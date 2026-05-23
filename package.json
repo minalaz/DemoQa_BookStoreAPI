@@ -1,0 +1,15 @@
+{
+  "name": "postman-api-tests",
+  "version": "1.0.0",
+  "description": "Postman API tests executed with Newman and generated HTML/JUnit reports.",
+  "private": true,
+  "scripts": {
+    "test:api": "newman run BookStore_API_Tests.postman_collection.json -e BookStore_API_Environment.postman_environment.json -r cli,htmlextra --reporter-htmlextra-export reports/report.html",
+    "test:api:junit": "newman run BookStore_API_Tests.postman_collection.json -e BookStore_API_Environment.postman_environment.json -r cli,junit --reporter-junit-export reports/report.xml",
+    "test:api:ci": "newman run BookStore_API_Tests.postman_collection.json -e BookStore_API_Environment.postman_environment.json -r cli,htmlextra,junit --reporter-htmlextra-export reports/report.html --reporter-junit-export reports/report.xml"
+  },
+  "devDependencies": {
+    "newman": "6.2.2",
+    "newman-reporter-htmlextra": "1.23.1"
+  }
+}

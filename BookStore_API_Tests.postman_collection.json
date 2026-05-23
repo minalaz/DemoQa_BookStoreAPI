@@ -1,0 +1,1278 @@
+{
+  "info": {
+    "_postman_id": "88bca87e-a37d-4cdd-804f-eeb08a50b1db",
+    "name": "BookStore_API_Tests",
+    "description": "## BookStore API Tests\n\nThis collection contains automated API tests for the BookStore application.  \nIt covers end-to-end scenarios including user registration, authentication,  \nbook management, and account cleanup.\n\n### Base URL\n\nAll requests use the `{{baseURL}}` environment variable.\n\n---\n\n### Folders & Test Scenarios\n\n#### Register User\n\nTests for the user registration endpoint (`POST /account/v1/user`):\n\n- Successful registration with valid credentials\n    \n- Validation errors: missing username, missing password, short password, missing all data\n    \n- Duplicate registration (user already exists)\n    \n\n#### BookStore Login\n\nTests for authentication endpoints:\n\n- Successful login and token generation (`POST /account/v1/generateToken`)\n    \n- Authorization check with valid token (`POST /account/v1/authorized`)\n    \n- Failed login: invalid credentials, missing credentials\n    \n\n#### Add, get, delete books\n\nTests for book management (`/bookStore/v1/books`):\n\n- Get all available books\n    \n- Add a single book and two books to user account\n    \n- Get user profile with added books\n    \n- Delete a single book, delete all books\n    \n- Unauthorized attempts to add or delete books\n    \n\n#### CleanUp\n\n- Deletes the test user account after the test run (`DELETE /account/v1/user/{{userId}}`)\n    \n\n---\n\n### Collection-Level Scripts\n\n**Pre-request script** sets up shared test data variables used across all requests:\n\n- Credentials for negative test cases (`badUsername`, `badPassword`, `shortPassword`)\n    \n- Expected response messages for validation and authorization errors\n    \n- JSON Schema definitions for response validation (registration, login, books, user profile, authorization)\n    \n\n**Test script** runs after every request and includes:\n\n- Request/response logging to the Postman console\n    \n- Response time assertion (below 2000ms)\n    \n- Content-Type header validation\n    \n- Automatic JSON Schema validation based on request name\n    \n\n---\n\n### Environment\n\nRequires the `BookStore_API_Environment` environment with the `baseURL` variable configured.\n\n---\n\n## AI Assistance\n\nPostman AI was used to assist with improving and refining an existing Postman collection.  \nAll changes were manually reviewed, adjusted, and validated before being committed.\n\n**Author:** MinaLazicic\n\n---",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26035351"
+  },
+  "item": [
+    {
+      "name": "Register User",
+      "item": [
+        {
+          "name": "User should be able to register with valid credentials",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "//Seting up valid user data\r",
+                  "//Valid username \r",
+                  "const username = pm.variables.replaceIn('{{$randomUserName}}')\r",
+                  "pm.collectionVariables.set(\"username\", username);\r",
+                  "//Valid password \r",
+                  "const pass = pm.variables.replaceIn('{{$randomPassword}}');\r",
+                  "pm.collectionVariables.set(\"password\", pass + \"A1!\")"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//Data setUp",
+                  "const jsonData = pm.response.json();",
+                  "const userId = jsonData.userID;",
+                  "const expectedUserName = pm.collectionVariables.get('username');",
+                  "pm.collectionVariables.set(\"userId\", userId );",
+                  "const usedUsername = pm.collectionVariables.get(\"username\");",
+                  "pm.collectionVariables.set(\"usedUsername\", usedUsername);",
+                  "const usedPassword = pm.collectionVariables.get(\"password\");",
+                  "pm.collectionVariables.set(\"usedPassword\", usedPassword);",
+                  "//Tests",
+                  "pm.test(\"Assert Status code\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.response.to.have.status(\"Created\");",
+                  "});",
+                  "pm.test(\"User's name is the one that user entered\", function () {",
+                  "    pm.expect(jsonData.username).to.eql(expectedUserName);",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"{{username}}\",\r\n    \"password\": \"{{password}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user"]
+            },
+            "description": "Verifies that a new user can successfully register with a valid username and password. Expects HTTP 201 and a response body containing userID, username, and an empty books array."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to register without username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgUserNamePasswordRequired');",
+                  "",
+                  "pm.test(\"Assert status code\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "    pm.response.to.have.status(\"Bad Request\");",
+                  "});",
+                  "pm.test(\"Assert error message is visible in response body\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(expectedMessage);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"\",\r\n    \"password\": \"{{password}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user"]
+            },
+            "description": "Verifies that registration fails when the username field is omitted. Expects HTTP 400 and an error response with a code and message indicating that username and password are required."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to register without password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgUserNamePasswordRequired');",
+                  "",
+                  "pm.test(\"Assert status code\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "    pm.response.to.have.status(\"Bad Request\");",
+                  "});",
+                  "pm.test(\"Assert error message is visible in response body\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(expectedMessage);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"{{username}}\",\r\n    \"password\": \"\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user"]
+            },
+            "description": "Verifies that registration fails when the password field is omitted. Expects HTTP 400 and an error response with a code and message indicating that username and password are required."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to register without any data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgUserNamePasswordRequired');",
+                  "",
+                  "pm.test(\"Assert status code\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "    pm.response.to.have.status(\"Bad Request\");",
+                  "});",
+                  "pm.test(\"Assert error message is visible in response body\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(expectedMessage);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"\",\r\n    \"password\": \"\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user"]
+            },
+            "description": "Verifies that registration fails when both username and password are omitted. Expects HTTP 400 and an error response with a code and message indicating that username and password are required."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to register with short password",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgPasswordShouldContain');",
+                  "",
+                  "pm.test(\"Assert Status code\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.response.to.have.status(\"Bad Request\");",
+                  "});",
+                  "pm.test(\"Password error message is correct\", function () {",
+                  "    pm.expect(pm.response.text()).to.contain(expectedMessage);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"{{username}}\",\r\n    \"password\": \"{{shortPassword}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user"]
+            },
+            "description": "Verifies that registration fails when the password does not meet complexity requirements (too short or missing required character types). Expects HTTP 400 and an error response with a descriptive message about password requirements."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to register with existed user data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgUserExists');",
+                  "",
+                  "pm.test(\"Assert status code\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([406]);",
+                  "    pm.response.to.have.status(\"Not Acceptable\");",
+                  "});",
+                  "pm.test(\"Assert error message is visible in response body\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(expectedMessage);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"{{usedUsername}}\",\r\n    \"password\": \"{{usedPassword}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user"]
+            },
+            "description": "Verifies that registration fails when attempting to register with a username that already exists. Expects HTTP 406 and an error response with a message indicating that the user already exists."
+          },
+          "response": []
+        }
+      ],
+      "description": "Contains tests for the user registration endpoint (POST /account/v1/user). Covers successful registration with valid credentials, as well as negative scenarios: missing username, missing password, short password, missing all data, and registration with already existing user data."
+    },
+    {
+      "name": "BookStore Login",
+      "item": [
+        {
+          "name": "User should be able to login with valid credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Data setUp",
+                  "const jsonData = pm.response.json();",
+                  "const token = jsonData.token;",
+                  "pm.collectionVariables.set(\"token\", token);",
+                  "//Tests",
+                  "const expectedStatus = pm.collectionVariables.get('successfulStatus');",
+                  "const expectedResult = pm.collectionVariables.get('successfullyAuthorized');",
+                  "",
+                  "pm.test(\"Assert Status code\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.response.to.have.status(\"OK\");",
+                  "});",
+                  "pm.test(\"Assert that all data is valid and usable\", function () {",
+                  "    pm.expect(jsonData.token).to.be.a('string').and.to.have.length.above(20);",
+                  "    pm.expect(jsonData.token).to.not.be.empty;",
+                  "    pm.expect(new Date(jsonData.expires).getTime()).to.be.above(Date.now());",
+                  "    pm.expect(jsonData.status).to.equal(expectedStatus);",
+                  "    pm.expect(jsonData.result).to.equal(expectedResult);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"{{username}}\",\r\n    \"password\": \"{{password}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/generateToken",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "generateToken"]
+            },
+            "description": "Verifies that a registered user can successfully generate an authentication token using valid credentials. Expects HTTP 200 and a response body containing a token, expiry date, status 'Success', and a success result message. Saves the token and userId as collection variables for use in subsequent requests."
+          },
+          "response": []
+        },
+        {
+          "name": "User should be able to authorize with valid token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Assert that Status code is 200\", function () {\r",
+                  "    pm.response.to.have.status(200);\r",
+                  "    pm.response.to.have.status(\"OK\");\r",
+                  "});\r",
+                  "pm.test(\"Assert user is truly authorized\", function () {\r",
+                  "    pm.expect(pm.response.json()).to.eql(true);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"{{username}}\",\r\n    \"password\": \"{{password}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/authorized",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "authorized"]
+            },
+            "description": "Verifies that a user with a valid token can be successfully authorized. Sends a POST request to /account/v1/authorized with Bearer token authentication. Expects HTTP 200 and a boolean true response."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to login without credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgUserNamePasswordRequired');",
+                  "",
+                  "pm.test(\"Assert status code\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400]);",
+                  "    pm.response.to.have.status(\"Bad Request\");",
+                  "});",
+                  "pm.test(\"Assert error message is visible in response body\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(expectedMessage);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \r\n    \"userName\": \"\",\r\n    \"password\": \"\"\r\n\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/generateToken",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "generateToken"]
+            },
+            "description": "Verifies that token generation fails when both username and password are omitted. Expects HTTP 400 and an error response with a code and message indicating that username and password are required."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to login with invalid credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedStatus = pm.collectionVariables.get('failedStatus');",
+                  "const expectedResult = pm.collectionVariables.get('failedResult');",
+                  "",
+                  "pm.test(\"Assert that Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.response.to.have.status(\"OK\");",
+                  "});",
+                  "pm.test(\"Assert invalid values of properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.token).to.be.null;",
+                  "    pm.expect(jsonData.expires).to.be.null;",
+                  "    pm.expect(jsonData.status).to.eql(expectedStatus);",
+                  "    pm.expect(jsonData.result).to.eql(expectedResult);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\": \"{{badUsername}}\",\r\n    \"password\": \"{{badPassword}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/account/v1/generateToken",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "generateToken"]
+            },
+            "description": "Verifies that token generation fails when invalid credentials are provided. Expects HTTP 200 with a response body containing null token and expires fields, status 'Failed', and a failure result message.\n\nNote: HTTP 200 here is intentional and expected — this is the BookStore API's design decision. The API always returns 200 for the /generateToken endpoint, regardless of whether authentication succeeded or failed. The actual outcome is indicated by the 'status' field in the response body ('Success' or 'Failed'), not by the HTTP status code."
+          },
+          "response": []
+        }
+      ],
+      "description": "Contains tests for authentication endpoints. Covers token generation (POST /account/v1/generateToken) with valid and invalid credentials, login without credentials, and user authorization verification (POST /account/v1/authorized) with a valid token."
+    },
+    {
+      "name": "Add, get, delete books",
+      "item": [
+        {
+          "name": "User should be able to get all books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Data setUp",
+                  "const jsonData = pm.response.json();",
+                  "jsonData.books.forEach((book, index) => {",
+                  "    pm.collectionVariables.set(`bookISBN_${index}`, book.isbn);",
+                  "    pm.collectionVariables.set(`bookTitle_${index}`, book.title);",
+                  "    pm.collectionVariables.set(`bookSubTitle_${index}`, book.subTitle);",
+                  "    pm.collectionVariables.set(`bookAuthor_${index}`, book.author);",
+                  "    pm.collectionVariables.set(`bookPublishDate_${index}`, book.publish_date);",
+                  "    pm.collectionVariables.set(`bookPublisher_${index}`, book.publisher);",
+                  "    pm.collectionVariables.set(`bookPages_${index}`, book.pages);",
+                  "    pm.collectionVariables.set(`bookDescription_${index}`, book.description);",
+                  "    pm.collectionVariables.set(`bookWebsite_${index}`, book.website);",
+                  "});",
+                  "//Tests",
+                  "const requiredProps = [\"isbn\", \"title\", \"subTitle\", \"author\", \"publish_date\", \"publisher\", \"pages\", \"description\", \"website\"];",
+                  "",
+                  "pm.test(\"Assert Status code\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.response.to.have.status(\"OK\");",
+                  "});",
+                  "pm.test(\"Each book has all required properties\", function () {",
+                  "    pm.expect(jsonData.books).to.be.an(\"array\").that.is.not.empty;",
+                  "    jsonData.books.forEach((book, index) => {",
+                  "        requiredProps.forEach(prop => {",
+                  "            pm.expect(book, `Book at index ${index} is missing property: ${prop}`).to.have.property(prop);",
+                  "        });",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/bookStore/v1/books",
+              "host": ["{{baseURL}}"],
+              "path": ["bookStore", "v1", "books"]
+            },
+            "description": "Verifies that the books catalog can be retrieved without authentication. Expects HTTP 200 and a response body containing a books array where each book has isbn, title, subTitle, author, publish_date, publisher, pages, description, and website fields. Saves the first two ISBNs as collection variables for use in add book requests."
+          },
+          "response": []
+        },
+        {
+          "name": "User should be able to add book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedISBN = pm.collectionVariables.get(\"bookISBN_0\");",
+                  "",
+                  "pm.test(\"Assert that Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.response.to.have.status(\"Created\");",
+                  "});",
+                  "pm.test(\"Added book ISBN matches expected ISBN\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.books[0].isbn).to.eql(expectedISBN);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token}}",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"userId\": \"{{userId}}\",\r\n  \"collectionOfIsbns\": [\r\n    {\r\n      \"isbn\": \"{{bookISBN_0}}\"\r\n    }\r\n  ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/bookStore/v1/books",
+              "host": ["{{baseURL}}"],
+              "path": ["bookStore", "v1", "books"]
+            },
+            "description": "Verifies that an authenticated user can add a single book to their account. Sends a POST request to /bookStore/v1/books with a Bearer token and a collectionOfIsbns array containing one ISBN. Expects HTTP 201 and a response body with a books array containing the added ISBN."
+          },
+          "response": []
+        },
+        {
+          "name": "User should be able to get added book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const jsonData = pm.response.json();",
+                  "const book = jsonData.books[0];",
+                  "const expectedISBN = pm.collectionVariables.get(\"bookISBN_0\");",
+                  "const expectedTitle = pm.collectionVariables.get(\"bookTitle_0\");",
+                  "const expectedSubTitle = pm.collectionVariables.get(\"bookSubTitle_0\");",
+                  "const expectedAuthor = pm.collectionVariables.get(\"bookAuthor_0\");",
+                  "const expectedPublishDate = pm.collectionVariables.get(\"bookPublishDate_0\");",
+                  "const expectedPublisher = pm.collectionVariables.get(\"bookPublisher_0\");",
+                  "const expectedPages = pm.collectionVariables.get(\"bookPages_0\");",
+                  "const expectedDescription = pm.collectionVariables.get(\"bookDescription_0\");",
+                  "const expectedWebsite = pm.collectionVariables.get(\"bookWebsite_0\");",
+                  "",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Added book matches expected data\", function () {",
+                  "    pm.expect(book.isbn).to.eql(expectedISBN);",
+                  "    pm.expect(book.title).to.eql(expectedTitle);",
+                  "    pm.expect(book.subTitle).to.eql(expectedSubTitle);",
+                  "    pm.expect(book.author).to.eql(expectedAuthor);",
+                  "    pm.expect(book.publish_date).to.eql(expectedPublishDate);",
+                  "    pm.expect(book.publisher).to.eql(expectedPublisher);",
+                  "    pm.expect(book.pages).to.eql(expectedPages);",
+                  "    pm.expect(book.description).to.eql(expectedDescription);",
+                  "    pm.expect(book.website).to.eql(expectedWebsite);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user/{{userId}}",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user", "{{userId}}"]
+            },
+            "description": "Verifies that the user profile reflects the book added to the account. Sends a GET request to /account/v1/user/:userId with Bearer token authentication. Expects HTTP 200 and a response body containing userId, username, and a books array with the full details of the added book."
+          },
+          "response": []
+        },
+        {
+          "name": "User should be able to delete book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//Tests\r",
+                  "pm.test(\"Assert that Status code is 204\", function () {\r",
+                  "    pm.response.to.have.status(204);\r",
+                  "    pm.response.to.have.status(\"No Content\")\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"isbn\": \"{{bookISBN_0}}\",\r\n  \"userId\": \"{{userId}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/bookStore/v1/book",
+              "host": ["{{baseURL}}"],
+              "path": ["bookStore", "v1", "book"]
+            },
+            "description": "Verifies that an authenticated user can delete a single book from their account. Sends a DELETE request to /bookStore/v1/book with a Bearer token, userId, and ISBN in the request body. Expects HTTP 204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "User should be able to add two books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "pm.test(\"Assert that Status code is 200\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.response.to.have.status(\"Created\");",
+                  "});",
+                  "pm.test(\"Added books ISBNs match expected ISBNs\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const expectedISBN_0 = pm.collectionVariables.get(\"bookISBN_0\");",
+                  "    const expectedISBN_1 = pm.collectionVariables.get(\"bookISBN_1\");",
+                  "",
+                  "    pm.expect(jsonData.books[0].isbn).to.eql(expectedISBN_0);",
+                  "    pm.expect(jsonData.books[1].isbn).to.eql(expectedISBN_1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"userId\": \"{{userId}}\",\r\n      \"collectionOfIsbns\": [\r\n        {\r\n          \"isbn\": \"{{bookISBN_0}}\"\r\n        },\r\n        {\r\n          \"isbn\": \"{{bookISBN_1}}\"\r\n        }\r\n      ]\r\n    }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/bookStore/v1/books",
+              "host": ["{{baseURL}}"],
+              "path": ["bookStore", "v1", "books"]
+            },
+            "description": "Verifies that an authenticated user can add two books at once to their account. Sends a POST request to /bookStore/v1/books with a Bearer token and a collectionOfIsbns array containing two ISBNs. Expects HTTP 201 and a response body with a books array containing both added ISBNs."
+          },
+          "response": []
+        },
+        {
+          "name": "User should be able to delete all books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//Tests\r",
+                  "pm.test(\"Assert that Status code is 204\", function () {\r",
+                  "    pm.response.to.have.status(204);\r",
+                  "    pm.response.to.have.status(\"No Content\")\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/bookStore/v1/books?UserId={{userId}}",
+              "host": ["{{baseURL}}"],
+              "path": ["bookStore", "v1", "books"],
+              "query": [
+                {
+                  "key": "UserId",
+                  "value": "{{userId}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "Verifies that an authenticated user can delete all books from their account in a single request. Sends a DELETE request to /bookStore/v1/books?UserId={{userId}} with Bearer token authentication. Expects HTTP 204 No Content."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to add book to account without authorization",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgUnauthorizedUser');",
+                  "",
+                  "pm.test(\"Assert Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.response.to.have.status(\"Unauthorized\");",
+                  "});",
+                  "pm.test(\"Assert Unauthorized user message\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(expectedMessage);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"userId\": \"{{userId}}\",\r\n  \"collectionOfIsbns\": [\r\n    {\r\n      \"isbn\": \"{{bookISBN_0}}\"\r\n    }\r\n  ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/bookStore/v1/books",
+              "host": ["{{baseURL}}"],
+              "path": ["bookStore", "v1", "books"]
+            },
+            "description": "Verifies that adding a book fails when no authentication token is provided. Sends a POST request to /bookStore/v1/books without a Bearer token. Expects HTTP 401 and an error response with a code and message indicating that the user is not authorized."
+          },
+          "response": []
+        },
+        {
+          "name": "User should not be able to delete books from account without authorization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "//Tests",
+                  "const expectedMessage = pm.collectionVariables.get('msgUnauthorizedUser');",
+                  "",
+                  "pm.test(\"Assert that Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.response.to.have.status(\"Unauthorized\");",
+                  "});",
+                  "pm.test(\"Assert that response body contains a string\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(expectedMessage);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/bookStore/v1/books?UserId={{userId}}",
+              "host": ["{{baseURL}}"],
+              "path": ["bookStore", "v1", "books"],
+              "query": [
+                {
+                  "key": "UserId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Verifies that deleting books fails when no authentication token is provided. Sends a DELETE request to /bookStore/v1/books?UserId={{userId}} without a Bearer token. Expects HTTP 401 and an error response with a code and message indicating that the user is not authorized."
+          },
+          "response": []
+        }
+      ],
+      "description": "Contains tests for the BookStore book management endpoints. Covers retrieving all books (GET /bookStore/v1/books), adding a single book and two books to the user account (POST /bookStore/v1/books), retrieving the user profile with added books (GET /account/v1/user/:userId), deleting a single book (DELETE /bookStore/v1/book), deleting all books (DELETE /bookStore/v1/books), and unauthorized add/delete attempts.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [""]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [""]
+          }
+        }
+      ]
+    },
+    {
+      "name": "CleanUp",
+      "item": [
+        {
+          "name": "User should be able to delete their account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "//Tests\r",
+                  "pm.test(\"Assert that Status code is 204\", function () {\r",
+                  "    pm.response.to.have.status(204);\r",
+                  "    pm.response.to.have.status(\"No Content\");\r",
+                  "});\r",
+                  "//Clean all collectionVariables\r",
+                  "pm.collectionVariables.clear();"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/account/v1/user/{{userId}}",
+              "host": ["{{baseURL}}"],
+              "path": ["account", "v1", "user", "{{userId}}"]
+            },
+            "description": "Teardown request that deletes the test user account after all tests have completed. Sends a DELETE request to /account/v1/user/:userId with Bearer token authentication. Expects HTTP 204 No Content, ensuring the test environment is clean for the next run."
+          },
+          "response": []
+        }
+      ],
+      "description": "Contains teardown requests that run after all tests. Deletes the test user account (DELETE /account/v1/user/:userId) to ensure a clean state for subsequent test runs.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [""]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [""]
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "//Collection level data setUp",
+          "const badUsername = \"unexisted\";",
+          "pm.collectionVariables.set(\"badUsername\", badUsername);",
+          "const badPassword = \"unexisted\";",
+          "pm.collectionVariables.set(\"badPassword\", badPassword);",
+          "const shortPassword = \"short\"",
+          "pm.collectionVariables.set(\"shortPassword\", shortPassword)",
+          "const msgUserNamePasswordRequired = \"UserName and Password required.\";",
+          "pm.collectionVariables.set(\"msgUserNamePasswordRequired\", msgUserNamePasswordRequired);",
+          "const msgPasswordShouldContain = \"Passwords must have at least one non alphanumeric character, one digit ('0'-'9'), one uppercase ('A'-'Z'), one lowercase ('a'-'z'), one special character and Password must be eight characters or longer\";",
+          "pm.collectionVariables.set(\"msgPasswordShouldContain\", msgPasswordShouldContain);",
+          "const msgUserExists = \"User exists!\"",
+          "pm.collectionVariables.set(\"msgUserExists\", msgUserExists);",
+          "const successfulStatus = \"Success\";",
+          "pm.collectionVariables.set(\"successfulStatus\", successfulStatus);",
+          "const successfullyAuthorized = \"User authorized successfully.\"",
+          "pm.collectionVariables.set(\"successfullyAuthorized\", successfullyAuthorized);",
+          "const failedStatus = \"Failed\";",
+          "pm.collectionVariables.set(\"failedStatus\",failedStatus);",
+          "const failedResult = \"User authorization failed.\";",
+          "pm.collectionVariables.set(\"failedResult\",failedResult);",
+          "const msgUnauthorizedUser = \"User not authorized!\";",
+          "pm.collectionVariables.set(\"msgUnauthorizedUser\", msgUnauthorizedUser);",
+          "",
+          "// ===== JSON SCHEMA DEFINITIONS =====",
+          "",
+          "// Schema for successful user registration (201)",
+          "pm.collectionVariables.set(\"schema_userCreated\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        userID: { type: \"string\" },",
+          "        username: { type: \"string\" },",
+          "        books: { type: \"array\" }",
+          "    },",
+          "    required: [\"userID\", \"username\", \"books\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for validation error responses (400, 406) - registration and login input errors",
+          "pm.collectionVariables.set(\"schema_validationError\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        code: { type: \"string\" },",
+          "        message: { type: \"string\" }",
+          "    },",
+          "    required: [\"code\", \"message\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for authorization error responses (401) - unauthorized access",
+          "pm.collectionVariables.set(\"schema_authError\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        code: { type: \"string\" },",
+          "        message: { type: \"string\" }",
+          "    },",
+          "    required: [\"code\", \"message\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for successful login/token response (200)",
+          "pm.collectionVariables.set(\"schema_tokenSuccess\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        token: { type: \"string\" },",
+          "        expires: { type: \"string\" },",
+          "        status: { type: \"string\" },",
+          "        result: { type: \"string\" }",
+          "    },",
+          "    required: [\"token\", \"expires\", \"status\", \"result\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for failed login/token response (200 with null values)",
+          "pm.collectionVariables.set(\"schema_tokenFailed\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        token: { type: [\"string\", \"null\"] },",
+          "        expires: { type: [\"string\", \"null\"] },",
+          "        status: { type: \"string\" },",
+          "        result: { type: \"string\" }",
+          "    },",
+          "    required: [\"token\", \"expires\", \"status\", \"result\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for GET all books response (200)",
+          "pm.collectionVariables.set(\"schema_booksList\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        books: {",
+          "            type: \"array\",",
+          "            items: {",
+          "                type: \"object\",",
+          "                properties: {",
+          "                    isbn: { type: \"string\" },",
+          "                    title: { type: \"string\" },",
+          "                    subTitle: { type: \"string\" },",
+          "                    author: { type: \"string\" },",
+          "                    publish_date: { type: \"string\" },",
+          "                    publisher: { type: \"string\" },",
+          "                    pages: { type: \"number\" },",
+          "                    description: { type: \"string\" },",
+          "                    website: { type: \"string\" }",
+          "                },",
+          "                required: [\"isbn\", \"title\", \"subTitle\", \"author\", \"publish_date\", \"publisher\", \"pages\", \"description\", \"website\"]",
+          "            }",
+          "        }",
+          "    },",
+          "    required: [\"books\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for add book(s) response (201)",
+          "pm.collectionVariables.set(\"schema_addedBooks\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        books: {",
+          "            type: \"array\",",
+          "            items: {",
+          "                type: \"object\",",
+          "                properties: {",
+          "                    isbn: { type: \"string\" }",
+          "                },",
+          "                required: [\"isbn\"]",
+          "            }",
+          "        }",
+          "    },",
+          "    required: [\"books\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for user profile response (200)",
+          "pm.collectionVariables.set(\"schema_userProfile\", JSON.stringify({",
+          "    type: \"object\",",
+          "    properties: {",
+          "        userId: { type: \"string\" },",
+          "        username: { type: \"string\" },",
+          "        books: {",
+          "            type: \"array\",",
+          "            items: {",
+          "                type: \"object\",",
+          "                properties: {",
+          "                    isbn: { type: \"string\" },",
+          "                    title: { type: \"string\" },",
+          "                    subTitle: { type: \"string\" },",
+          "                    author: { type: \"string\" },",
+          "                    publish_date: { type: \"string\" },",
+          "                    publisher: { type: \"string\" },",
+          "                    pages: { type: \"number\" },",
+          "                    description: { type: \"string\" },",
+          "                    website: { type: \"string\" }",
+          "                },",
+          "                required: [\"isbn\", \"title\", \"subTitle\", \"author\", \"publish_date\", \"publisher\", \"pages\", \"description\", \"website\"]",
+          "            }",
+          "        }",
+          "    },",
+          "    required: [\"userId\", \"username\", \"books\"],",
+          "    additionalProperties: false",
+          "}));",
+          "",
+          "// Schema for authorize response (200) - returns boolean",
+          "pm.collectionVariables.set(\"schema_authorizeResponse\", JSON.stringify({",
+          "    type: \"boolean\"",
+          "}));",
+          "",
+          "// Schema for delete responses (204 No Content) - empty body, no schema needed",
+          "// Handled by status code test in individual requests"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// ===== REQUEST LOGGING =====",
+          "(function () {",
+          "    const responseBody = pm.response.text();",
+          "    console.log(\"-----------------------------------------\");",
+          "    console.log(\"[REQUEST] \" + pm.info.requestName);",
+          "    console.log(\"[METHOD]  \" + pm.request.method + \" \" + pm.request.url.toString());",
+          "    console.log(\"[STATUS]  \" + pm.response.code + \" \" + pm.response.status);",
+          "    console.log(\"[TIME]    \" + pm.response.responseTime + \"ms\");",
+          "",
+          "    if (responseBody && responseBody.length > 0) {",
+          "        try {",
+          "            const parsed = JSON.parse(responseBody);",
+          "            console.log(\"[BODY]    \" + JSON.stringify(parsed, null, 2));",
+          "        } catch (e) {",
+          "            console.log(\"[BODY]    \" + responseBody);",
+          "        }",
+          "    } else {",
+          "        console.log(\"[BODY]    (empty)\");",
+          "    }",
+          "    console.log(\"-----------------------------------------\");",
+          "})();",
+          "",
+          "// ===== RESPONSE TIME TEST =====",
+          "pm.test(\"Response time is below 5000ms\", function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "// ===== CONTENT-TYPE TEST =====",
+          "pm.test(\"Content-Type is application/json\", function () {",
+          "    const responseBody = pm.response.text();",
+          "    if (responseBody.length > 0) {",
+          "        pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+          "    }",
+          "});",
+          "",
+          "// ===== SCHEMA VALIDATION =====",
+          "(function () {",
+          "    const responseBody = pm.response.text();",
+          "",
+          "    const schemaMap = {",
+          "        \"User should be able to register with valid credentials\": \"schema_userCreated\",",
+          "        \"User should not be able to register with short password\": \"schema_validationError\",",
+          "        \"User should not be able to register without any data\": \"schema_validationError\",",
+          "        \"User should not be able to register without username\": \"schema_validationError\",",
+          "        \"User should not be able to register with existed user data\": \"schema_validationError\",",
+          "        \"User should not be able to register without password\": \"schema_validationError\",",
+          "        \"User should not be able to login without credentials\": \"schema_validationError\",",
+          "        \"User should not be able to login with invalid credentials\": \"schema_tokenFailed\",",
+          "        \"User should be able to login with valid credentials\": \"schema_tokenSuccess\",",
+          "        \"User should be able to add two books\": \"schema_addedBooks\",",
+          "        \"User should be able to get all books\": \"schema_booksList\",",
+          "        \"User should be able to get added book\": \"schema_userProfile\",",
+          "        \"User should be able to authorize with valid token\": \"schema_authorizeResponse\",",
+          "        \"User should be able to add book\": \"schema_addedBooks\",",
+          "        \"User should not be able to add book to account without authorization\": \"schema_authError\",",
+          "        \"User should not be able to delete books from account without authorization\": \"schema_authError\"",
+          "    };",
+          "",
+          "    const schemaKey = schemaMap[pm.info.requestName];",
+          "",
+          "    if (schemaKey) {",
+          "        const schemaStr = pm.collectionVariables.get(schemaKey);",
+          "",
+          "        pm.test(\"Schema '\" + schemaKey + \"' is defined\", function () {",
+          "            pm.expect(schemaStr, \"Schema not found in collection variables\").to.not.be.undefined;",
+          "            pm.expect(schemaStr, \"Schema is empty\").to.not.be.null;",
+          "        });",
+          "",
+          "        if (schemaStr) {",
+          "            const schema = JSON.parse(schemaStr);",
+          "            const response = JSON.parse(responseBody);",
+          "",
+          "            pm.test(\"Response matches schema: \" + schemaKey, function () {",
+          "                const Ajv = require('ajv');",
+          "                const ajv = new Ajv();",
+          "                const validate = ajv.compile(schema);",
+          "                const valid = validate(response);",
+          "                pm.expect(valid, valid ? \"\" : ajv.errorsText(validate.errors)).to.be.true;",
+          "            });",
+          "        }",
+          "    }",
+          "})();"
+        ]
+      }
+    }
+  ]
+}
