@@ -1,5 +1,7 @@
 ## BookStore API Tests
 
+[![BookStore API Tests](https://github.com/minalaz/DemoQa_BookStoreAPI/actions/workflows/newman.yml/badge.svg)](https://github.com/minalaz/DemoQa_BookStoreAPI/actions/workflows/newman.yml)
+
 Automated API test suite for the DemoQA BookStore API, created and maintained in Postman.
 
 The collection covers the main BookStore user journey: user registration, authentication, book management, authorization checks, and final cleanup of test data.
